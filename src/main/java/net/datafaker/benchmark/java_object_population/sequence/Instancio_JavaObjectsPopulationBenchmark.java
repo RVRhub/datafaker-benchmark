@@ -1,14 +1,9 @@
-package net.datafaker.benchmark.java_object_population;
+package net.datafaker.benchmark.java_object_population.sequence;
 
-import java.util.Locale;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import net.datafaker.Faker;
-import net.datafaker.annotations.FakeForSchema;
-import net.datafaker.providers.base.BaseFaker;
-import net.datafaker.service.RandomService;
-import net.datafaker.transformations.Schema;
+import org.instancio.Instancio;
+import org.instancio.generators.Generators;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -22,18 +17,18 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import static net.datafaker.transformations.Field.field;
+import static org.instancio.Select.field;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
 @Fork(value = 2, jvmArgs = {"-Xms2G", "-Xmx2G"})
-public class Datafaker_JavaObjectPopulateBenchmark {
+public class Instancio_JavaObjectsPopulationBenchmark {
 
 	public static void main(String[] args) throws RunnerException {
 
 		Options opt = new OptionsBuilder()
-				.include(Datafaker_JavaObjectPopulateBenchmark.class.getSimpleName())
+				.include(Instancio_JavaObjectsPopulationBenchmark.class.getSimpleName())
 				.build();
 
 		new Runner(opt).run();
@@ -41,20 +36,31 @@ public class Datafaker_JavaObjectPopulateBenchmark {
 
 	@Benchmark
 	@BenchmarkMode(Mode.AverageTime)
-	public void javaObjectPopulate(Blackhole blackhole) {
-		for (int i = 0; i < 1000_000; i++) {
-			blackhole.consume(BaseFaker.populate(MyClass.class));
-		}
+	public void instancioSequenceFakerTest(Blackhole blackhole) {
+			blackhole.consume(
+					Instancio.ofList(MyClass.class)
+							.size(1000_000)
+							.generate(field(MyClass::getName), Generators::string)
+							.create()
+			);
 	}
 
-	@FakeForSchema("defaultSchema")
 	public static class MyClass {
-		private String name;
-	}
+		private final String name;
 
-	static Faker faker = new Faker(Locale.forLanguageTag("fr-en"), new RandomService(new Random(1)));
+		public MyClass(String name) {
+			this.name = name;
+		}
 
-	public static Schema<Object, String> defaultSchema() {
-		return Schema.of(field("name", () -> faker.name().fullName()));
+		public String getName() {
+			return name;
+		}
+
+		@Override
+		public String toString() {
+			return "MyClass{" +
+					"name='" + name + '\'' +
+					'}';
+		}
 	}
 }
